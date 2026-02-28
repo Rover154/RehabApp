@@ -145,7 +145,9 @@ ${data.comment ? `- 💬 Комментарий: ${data.comment}` : ''}
         other: 'Другое',
       };
 
-      const response = await fetch('/api/send-email', {
+      // Используем API_URL из env или относительный путь для production
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

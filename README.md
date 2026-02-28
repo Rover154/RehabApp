@@ -12,6 +12,7 @@ npm run dev
 ## 📦 Сборка для production
 
 ```bash
+npm install
 npm run build
 ```
 
@@ -22,28 +23,69 @@ npm run build
 ```env
 # Telegram Bot Token
 VITE_TELEGRAM_BOT_TOKEN=your_bot_token_here
-
-# Telegram Chat ID
 VITE_TELEGRAM_CHAT_ID=@cigunrehab
 
+# API URL (для Render.com - укажите URL вашего Web Service)
+VITE_API_URL=https://your-app-api.onrender.com
+
+# io.net API Key
+VITE_IO_NET_API_KEY=your_io_net_api_key_here
+
+# Groq API Key
+VITE_GROQ_API_KEY=your_groq_api_key_here
+
 # Email для отправки через SMTP
-EMAIL_USER=r-t-c@narod.ru
-EMAIL_PASSWORD=your_password_here
+EMAIL_USER=your_email_here
+EMAIL_PASSWORD=your_email_password_here
 ```
 
-## 🌐 Деплой на Vercel
+## 🌐 Деплой на Render.com
+
+### Вариант 1: Автоматический (через render.yaml)
 
 1. Запушите проект на GitHub
-2. Подключите репозиторий в [Vercel](https://vercel.com/new)
-3. Добавьте переменные окружения в Vercel Dashboard
-4. Деплой произойдёт автоматически
+2. В Render Dashboard нажмите **New +** → **Blueprint**
+3. Подключите репозиторий GitHub
+4. Render автоматически создаст 2 сервиса:
+   - **Static Site** (фронтенд)
+   - **Web Service** (API)
+5. Добавьте переменные окружения в Dashboard каждого сервиса
+
+### Вариант 2: Ручной
+
+#### Static Site (фронтенд):
+1. **New +** → **Static Site**
+2. Подключите репозиторий
+3. Build Command: `npm install && npm run build`
+4. Publish Directory: `dist`
+5. Добавьте environment variables:
+   - `VITE_TELEGRAM_BOT_TOKEN`
+   - `VITE_TELEGRAM_CHAT_ID`
+   - `VITE_IO_NET_API_KEY`
+   - `VITE_GROQ_API_KEY`
+   - `VITE_API_URL` (URL вашего Web Service)
+
+#### Web Service (API):
+1. **New +** → **Web Service**
+2. Подключите репозиторий
+3. Environment: `Node`
+4. Build Command: `npm install`
+5. Start Command: `node server.js`
+6. Добавьте environment variables:
+   - `EMAIL_USER`
+   - `EMAIL_PASSWORD`
+   - `IO_NET_API_KEY`
+   - `GROQ_API_KEY`
+   - `TELEGRAM_BOT_TOKEN`
+   - `TELEGRAM_CHAT_ID`
+   - `PORT` (по умолчанию 10000)
 
 ## 📁 Структура проекта
 
 ```
 rehab-app/
 ├── api/
-│   └── send-email.ts       # Vercel Serverless Function
+│   └── send-email.ts       # API для отправки email с AI генерацией
 ├── src/
 │   ├── components/
 │   │   ├── Step1Welcome.tsx
@@ -62,9 +104,23 @@ rehab-app/
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
-├── vercel.json
+├── server.js               # Express сервер для API
+├── render.yaml             # Конфигурация для Render
+├── vercel.json             # Конфигурация для Vercel
 └── package.json
 ```
+
+## 🤖 AI Генерация упражнений
+
+Приложение использует **два AI API** с автоматическим переключением:
+
+1. **io.net** (Kimi-K2) — основной API
+2. **Groq** (Llama-3.1-8b-instant) — резервный API
+
+### Преимущества:
+- Автоматическое переключение при исчерпании лимита токенов
+- Дневные лимиты: io.net (10k токенов), Groq (100k токенов)
+- Fallback генерация при недоступности обоих API
 
 ## 📱 Экраны приложения
 
@@ -83,3 +139,7 @@ rehab-app/
 - Бело-зелёная цветовая схема
 - Адаптивный дизайн (ПК, планшет, смартфон)
 - Зелёные кнопки с белым текстом
+
+## 📞 Контакты
+
+📞 +7 (953) 790-20-10

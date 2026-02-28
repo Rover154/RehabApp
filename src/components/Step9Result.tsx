@@ -33,7 +33,7 @@ export function Step9Result({ name, onBuy, isBuying = false }: Step9ResultProps)
             <Mail className="mr-2 w-5 h-5" />
             ПРИОБРЕСТИ МЕТОДИЧКУ
           </span>
-          <span className="text-sm mt-1">за 299 руб.</span>
+          <span className="text-sm mt-1">за 0 руб.</span>
         </button>
 
         <a href="https://t.me/cigunrehab_bot" target="_blank" rel="noopener noreferrer" className="btn-secondary w-full flex items-center justify-center">

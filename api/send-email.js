@@ -1,11 +1,12 @@
-// Vercel Serverless Function для отправки email с генерацией через AI
-// 1. Принимает данные анкеты
-// 2. Генерирует комплекс 10-15 упражнений через io.net AI
-// 3. Отправляет email клиенту и инструктору
+// API для отправки email с генерацией через AI с поддержкой io.net и Groq
+// Работает на Render.com Web Service
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
+import express from 'express';
 
+const router = express.Router();
+
+// SMTP transporter
 const transporter = nodemailer.createTransport({
   host: 'smtp.narod.ru',
   port: 465,
@@ -17,28 +18,205 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Генерация комплекса упражнений через AI io.net
-async function generateExercisesWithAI(formData: any): Promise<string> {
-  const apiKey = process.env.VITE_IO_NET_API_KEY || process.env.NET_API_KEY;
-  const apiUrl = process.env.VITE_IO_NET_API_URL || 'https://api.intelligence.io.solutions/api/v1/chat/completions';
-  const model = process.env.VITE_AI_MODEL || 'moonshotai/Kimi-K2-Instruct-0905';
+// === Глобальные переменные для переключения API ===
+let USE_GROQ = false;  // Флаг: false = io.net, true = Groq
+const IO_NET_DAILY_LIMIT = 10000;  // Дневной лимит токенов для io.net
+const GROQ_DAILY_LIMIT = 100000;   // Дневной лимит для Groq
+let ioNetTokensUsed = 0;
+let groqTokensUsed = 0;
+let lastResetDate = null;
 
-  const conditionLabels: Record<string, string> = {
-    stroke: 'Инсульт',
-    heart_attack: 'Инфаркт',
-    trauma: 'Травма',
-    chronic: 'Хроническое заболевание',
-    other: 'Другое',
-  };
+// Сброс счётчиков при новом дне
+function resetDailyTokensIfNewDay() {
+  const today = new Date().toISOString().split('T')[0];
+  if (lastResetDate !== today) {
+    console.log(`📅 Новый день (${today}), сброс счётчиков токенов`);
+    ioNetTokensUsed = 0;
+    groqTokensUsed = 0;
+    lastResetDate = today;
+  }
+}
 
-  const chronicLabels: Record<string, string> = {
-    hypertension: 'Гипертония',
-    asthma: 'Астма',
-    diabetes: 'Диабет',
-    other: 'Другое',
-  };
+// Проверка доступности io.net
+async function checkIoNetAvailability() {
+  resetDailyTokensIfNewDay();
+  
+  try {
+    const response = await fetch('https://api.intelligence.io.solutions/api/v1/models', {
+      headers: { 'Authorization': `Bearer ${process.env.IO_NET_API_KEY}` },
+      method: 'GET',
+    });
+    
+    if (response.status === 401) {
+      console.error('❌ io.net: Неверный API ключ');
+      return false;
+    }
+    if (response.status === 429) {
+      console.warn('⚠️ io.net: Превышен лимит токенов (429)');
+      return false;
+    }
+    if (response.status === 200) {
+      const remaining = response.headers.get('X-RateLimit-Remaining');
+      if (remaining && parseInt(remaining) <= 0) {
+        console.warn('⚠️ io.net: Лимит токенов исчерпан');
+        return false;
+      }
+      console.log('✅ io.net: API доступно');
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(`❌ io.net: Ошибка проверки — ${error}`);
+    return false;
+  }
+}
 
-  const prompt = `
+// Проверка доступности Groq
+async function checkGroqAvailability() {
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+      method: 'GET',
+    });
+    
+    if (response.status === 401) {
+      console.error('❌ Groq: Неверный API ключ');
+      return false;
+    }
+    if (response.status === 429) {
+      console.warn('⚠️ Groq: Превышен лимит токенов (429)');
+      return false;
+    }
+    if (response.status === 200) {
+      const remaining = response.headers.get('x-ratelimit-remaining-tokens');
+      if (remaining && parseInt(remaining) <= 0) {
+        console.warn('⚠️ Groq: Лимит токенов исчерпан');
+        return false;
+      }
+      console.log('✅ Groq: API доступно');
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(`❌ Groq: Ошибка проверки — ${error}`);
+    return false;
+  }
+}
+
+// Определение доступного API
+async function getAvailableApi() {
+  if (!USE_GROQ && await checkIoNetAvailability()) {
+    return 'io_net';
+  }
+  if (await checkGroqAvailability()) {
+    USE_GROQ = true;
+    return 'groq';
+  }
+  if (await checkIoNetAvailability()) {
+    USE_GROQ = false;
+    return 'io_net';
+  }
+  return null;
+}
+
+// Генерация через AI с фолбэком
+async function generateWithFallback(messages, retryCount = 0) {
+  if (retryCount > 3) {
+    console.error('❌ Превышено количество попыток переключения API');
+    throw new Error('Сервис временно недоступен');
+  }
+
+  const api = await getAvailableApi();
+  console.log(`🤖 Используем API: ${api || 'none'}`);
+
+  if (api === 'groq') {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages,
+          max_tokens: 4000,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Groq error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const usage = result.usage;
+      const tokensUsed = usage?.total_tokens || 0;
+      groqTokensUsed += tokensUsed;
+      console.log(`📊 Groq: использовано токенов: ${tokensUsed}, всего сегодня: ${groqTokensUsed}`);
+
+      // Проверка дневного лимита
+      if (groqTokensUsed >= GROQ_DAILY_LIMIT) {
+        console.warn('⚠️ Groq: Достигнут дневной лимит, пробуем io.net');
+        USE_GROQ = false;
+        groqTokensUsed = 0;
+        return generateWithFallback(messages, retryCount + 1);
+      }
+
+      return result.choices?.[0]?.message?.content?.trim() || '';
+    } catch (error) {
+      console.error(`❌ Groq ошибка: ${error.message}`);
+      USE_GROQ = false;
+      return generateWithFallback(messages, retryCount + 1);
+    }
+  } else if (api === 'io_net') {
+    try {
+      const response = await fetch('https://api.intelligence.io.solutions/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.IO_NET_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'moonshotai/Kimi-K2-Instruct-0905',
+          messages,
+          max_tokens: 4000,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`io.net error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const usage = result.usage;
+      const tokensUsed = usage?.total_tokens || 0;
+      ioNetTokensUsed += tokensUsed;
+      console.log(`📊 io.net: использовано токенов: ${tokensUsed}, всего сегодня: ${ioNetTokensUsed}`);
+
+      // Проверка дневного лимита
+      if (ioNetTokensUsed >= IO_NET_DAILY_LIMIT) {
+        console.warn('⚠️ io.net: Достигнут дневной лимит, пробуем Groq');
+        USE_GROQ = true;
+        ioNetTokensUsed = 0;
+        return generateWithFallback(messages, retryCount + 1);
+      }
+
+      return result.choices?.[0]?.message?.content?.trim() || '';
+    } catch (error) {
+      console.error(`❌ io.net ошибка: ${error.message}`);
+      USE_GROQ = true;
+      return generateWithFallback(messages, retryCount + 1);
+    }
+  } else {
+    throw new Error('Нет доступного API');
+  }
+}
+
+// Формирование промпта для AI
+function createPrompt(formData) {
+  return `
 Ты — профессиональный врач-реабилитолог с 20-летним стажем. Составь персональный комплекс из 10-15 упражнений для пациента.
 
 📋 ДАННЫЕ ПАЦИЕНТА:
@@ -93,7 +271,7 @@ ${formData.comment ? `- Комментарий пациента: ${formData.comm
    Исходное положение: [описание]
    Выполнение: [пошагово]
    Повторения: [кол-во]
-   
+
 [и так далее...]
 
 📋 ОСНОВНОЙ КОМПЛЕКС:
@@ -111,58 +289,15 @@ ${formData.comment ? `- Комментарий пациента: ${formData.comm
 
 📞 Для персональной консультации: +7 (953) 790-20-10
 `.trim();
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          {
-            role: 'system',
-            content: 'Ты — профессиональный врач-реабилитолог. Составляешь безопасные и эффективные комплексы упражнений для реабилитации.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        max_tokens: 4000,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API Error:', response.status, errorText);
-      throw new Error(`AI API error: ${response.status} ${errorText}`);
-    }
-
-    const result = await response.json();
-    const exercises = result.choices?.[0]?.message?.content?.trim();
-
-    if (!exercises) {
-      throw new Error('AI вернул пустой ответ');
-    }
-
-    return exercises;
-  } catch (error: any) {
-    console.error('Ошибка генерации упражнений:', error);
-    throw error;
-  }
 }
 
 // Fallback генерация (если AI недоступен)
-function generateFallbackRecommendations(data: any): string {
+function generateFallbackRecommendations(data) {
   const conditions = data.conditions || '';
   const timePassed = data.timePassed || '';
   const age = parseInt(data.age) || 60;
 
-  let rec: string[] = [];
+  let rec = [];
 
   rec.push('ПЕРСОНАЛЬНЫЙ КОМПЛЕКС УПРАЖНЕНИЙ');
   rec.push('=================================');
@@ -299,7 +434,9 @@ function generateFallbackRecommendations(data: any): string {
   return rec.join('\n');
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+// POST /api/send-email
+router.post('/send-email', async (req, res) => {
+  // CORS
   const origin = req.headers.origin || '';
   res.setHeader('Access-Control-Allow-Origin', origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -322,14 +459,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Не заполнены обязательные поля' });
     }
 
-    // Генерация комплекса через AI
+    // Генерация комплекса через AI с фолбэком
     console.log('🤖 Генерация упражнений через AI...');
-    let exercisePlan: string;
+    let exercisePlan;
 
     try {
-      exercisePlan = await generateExercisesWithAI(formData);
+      const prompt = createPrompt(formData);
+      const messages = [
+        {
+          role: 'system',
+          content: 'Ты — профессиональный врач-реабилитолог. Составляешь безопасные и эффективные комплексы упражнений для реабилитации.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ];
+      
+      exercisePlan = await generateWithFallback(messages);
       console.log('✅ Упражнения сгенерированы через AI');
-    } catch (aiError: any) {
+    } catch (aiError) {
       console.error('❌ Ошибка AI, используем запасной вариант:', aiError.message);
       exercisePlan = generateFallbackRecommendations(formData);
     }
@@ -440,10 +589,17 @@ ${exercisePlan}
       success: true,
       message: 'Заявка обработана, письма отправлены',
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Ошибка:', error);
     return res.status(500).json({
       error: error.message || 'Не удалось отправить письмо',
     });
   }
-}
+});
+
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+export default router;
