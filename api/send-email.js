@@ -471,7 +471,7 @@ router.post('/send-email', async (req, res) => {
       exercisePlan = generateFallbackRecommendations(formData);
     }
 
-    // === ОТПРАВКА ЧЕРЕZ TELEGRAM (вместо email) ===
+    // === ОТПРАВКА ЧЕРЕЗ TELEGRAM (вместо email) ===
     const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.VITE_TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID || process.env.VITE_TELEGRAM_CHAT_ID || '@cigunrehab';
 
@@ -480,9 +480,15 @@ router.post('/send-email', async (req, res) => {
       throw new Error('Не настроен Telegram бот. Добавьте TOKEN в переменные окружения.');
     }
 
+    // Определяем тип запроса
+    const requestType = formData.requestType || 'pdf';
+    const isVideoRequest = requestType === 'video';
+
     // Формируем сообщение для инструктора
+    const requestLabel = isVideoRequest ? '🎥 ЗАПРОС НА ВИДЕО-КОМПЛЕКС' : '📄 ЗАПРОС НА PDF КОМПЛЕКС';
+    
     const instructorMessage = `
-🔔 *НОВАЯ ЗАЯВКА НА РЕАБИЛИТАЦИЮ*
+${requestLabel}
 
 👤 *Клиент:* ${formData.clientName}
 📱 *Телефон:* ${formData.phone}
@@ -503,7 +509,7 @@ ${exercisePlan.substring(0, 2000)}${exercisePlan.length > 2000 ? '...' : ''}
 
     // Отправка уведомления инструктору
     console.log('📤 Отправка уведомления инструктору в Telegram...');
-    
+
     try {
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
@@ -520,17 +526,24 @@ ${exercisePlan.substring(0, 2000)}${exercisePlan.length > 2000 ? '...' : ''}
       // Не прерываем процесс, продолжаем
     }
 
-    // Отправка комплекса клиенту (в личные сообщения через бота)
-    // Для этого нужно чтобы клиент сначала запустил бота
-    // Поэтому отправляем только инструктору, а клиенту показываем на экране
+    // Если это не видео-запрос, возвращаем комплекс клиенту
+    if (!isVideoRequest) {
+      console.log('✅ Заявка успешно обработана');
 
-    console.log('✅ Заявка успешно обработана');
+      return res.status(200).json({
+        success: true,
+        message: 'Заявка отправлена инструктору. Комплекс доступен для скачивания.',
+        exercisePlan: exercisePlan, // Возвращаем комплекс для отображения
+      });
+    } else {
+      // Для видео-запроса просто подтверждаем отправку
+      console.log('✅ Видео-запрос отправлен инструктору');
 
-    return res.status(200).json({
-      success: true,
-      message: 'Заявка отправлена инструктору. Комплекс будет отправлен на email.',
-      exercisePlan: exercisePlan, // Возвращаем комплекс для отображения
-    });
+      return res.status(200).json({
+        success: true,
+        message: 'Запрос на видео-комплекс отправлен инструктору.',
+      });
+    }
   } catch (error) {
     console.error('❌ Ошибка:', error);
     console.error('❌ Stack:', error.stack);

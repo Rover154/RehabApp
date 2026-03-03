@@ -168,6 +168,7 @@ ${data.comment ? `- 💬 Комментарий: ${data.comment}` : ''}
           chronicOtherDetails: formData.chronicOtherDetails,
           format: formatLabels[formData.format] || formData.format,
           comment: formData.comment,
+          requestType: 'pdf',
         }),
       });
 
@@ -179,16 +180,85 @@ ${data.comment ? `- 💬 Комментарий: ${data.comment}` : ''}
 
       // Сохраняем сгенерированный комплекс для отображения
       if (result.exercisePlan) {
-        // Передаём комплекс в компонент Step9Result через formData
         (formData as any).exercisePlan = result.exercisePlan;
       }
 
-      alert('✅ Спасибо! Заявка отправлена инструктору.\n\nВы получите персональный комплекс упражнений.');
+      alert('✅ Заявка на PDF отправлена!\n\nКомплекс упражнений доступен ниже.');
     } catch (error) {
-      console.error('Ошибка отправки email:', error);
-      alert('Ошибка отправки письма. Попробуйте позже или свяжитесь с нами по телефону.');
+      console.error('Ошибка отправки:', error);
+      alert('Ошибка отправки. Попробуйте позже или свяжитесь с нами по телефону.');
     } finally {
       setIsBuying(false);
+    }
+  };
+
+  const handleVideoRequest = async () => {
+    try {
+      const conditionLabels: Record<string, string> = {
+        stroke: 'Инсульт',
+        heart_attack: 'Инфаркт',
+        trauma: 'Травма',
+        chronic: 'Хроническое заболевание',
+        other: 'Другое',
+      };
+
+      const formatLabels: Record<string, string> = {
+        self: 'Самостоятельно по методичке',
+        online: 'С инструктором онлайн',
+        personal: 'Личные занятия в Новосибирске',
+        dont_know: 'Не знаю, помогите выбрать',
+      };
+
+      const chronicLabels: Record<string, string> = {
+        hypertension: 'Гипертония',
+        asthma: 'Астма',
+        diabetes: 'Диабет',
+        other: 'Другое',
+      };
+
+      const traumaAreaLabels: Record<string, string> = {
+        arm: 'Рука / плечо',
+        leg: 'Нога / колено / голеностоп',
+        back: 'Спина / позвоночник',
+        neck: 'Шея',
+        hip: 'Тазобедренный сустав',
+        other: 'Другое',
+      };
+
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName: formData.name,
+          clientEmail: formData.email,
+          phone: formData.phone,
+          age: formData.age,
+          height: formData.height,
+          weight: formData.weight,
+          conditions: formData.conditions.map((c: string) => conditionLabels[c] || c).join(', '),
+          otherDetails: formData.otherConditionDetails,
+          timePassed: formData.timePassed,
+          strokeSymptoms: formData.strokeSymptoms,
+          heartAttackSymptoms: formData.heartAttackSymptoms,
+          traumaArea: formData.traumaArea ? traumaAreaLabels[formData.traumaArea] || formData.traumaArea : '',
+          traumaOtherDetails: formData.traumaOtherDetails,
+          chronicDiseases: formData.chronicDiseases.map((c: string) => chronicLabels[c] || c).join(', '),
+          chronicOtherDetails: formData.chronicOtherDetails,
+          format: formatLabels[formData.format] || formData.format,
+          comment: formData.comment,
+          requestType: 'video',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Не удалось отправить запрос');
+      }
+
+      alert('✅ Запрос на видео-комплекс отправлен!\n\nИнструктор свяжется с вами в Telegram.');
+    } catch (error) {
+      console.error('Ошибка отправки:', error);
+      alert('Ошибка отправки. Попробуйте позже.');
     }
   };
 
@@ -209,18 +279,23 @@ ${data.comment ? `- 💬 Комментарий: ${data.comment}` : ''}
       case 7:
         return <Step7Format onNext={(format) => { updateData({ format }); nextStep(); }} onBack={prevStep} />;
       case 8:
-        return <Step8Contact initialName={formData.name} onNext={(data) => { 
-          const finalData = { ...formData, ...data }; 
-          updateData(data); 
-          handleTelegramSend(finalData); 
-          nextStep(); 
+        return <Step8Contact initialName={formData.name} onNext={(data) => {
+          const finalData = { ...formData, ...data };
+          updateData(data);
+          handleTelegramSend(finalData);
+          nextStep();
         }} onBack={prevStep} />;
       case 9:
-        return <Step9Result 
-          name={formData.name} 
-          exercisePlan={(formData as any).exercisePlan} 
-          onBuy={handleBuy} 
-          isBuying={isBuying} 
+        return <Step9Result
+          name={formData.name}
+          phone={formData.phone}
+          email={formData.email}
+          exercisePlan={(formData as any).exercisePlan}
+          onBuy={handleBuy}
+          onVideoRequest={handleVideoRequest}
+          isBuying={isBuying}
+          isSendingPdf={isBuying}
+          isRequestingVideo={false}
         />;
       default:
         return null;
