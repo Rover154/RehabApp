@@ -25,13 +25,13 @@ npm run build
 VITE_TELEGRAM_BOT_TOKEN=your_bot_token_here
 VITE_TELEGRAM_CHAT_ID=@cigunrehab
 
-# API URL (для Render.com - укажите URL вашего Web Service)
-VITE_API_URL=https://your-app-api.onrender.com
+# API URL (для Render.com - оставьте пустым для production)
+VITE_API_URL=
 
-# io.net API Key
+# io.net API Key (Kimi-K2)
 VITE_IO_NET_API_KEY=your_io_net_api_key_here
 
-# Groq API Key
+# Groq API Key (Llama-3.1-8b-instant)
 VITE_GROQ_API_KEY=your_groq_api_key_here
 
 # Email для отправки через SMTP
@@ -41,51 +41,30 @@ EMAIL_PASSWORD=your_email_password_here
 
 ## 🌐 Деплой на Render.com
 
-### Вариант 1: Автоматический (через render.yaml)
+### Автоматический деплой (через render.yaml)
 
 1. Запушите проект на GitHub
 2. В Render Dashboard нажмите **New +** → **Blueprint**
-3. Подключите репозиторий GitHub
-4. Render автоматически создаст 2 сервиса:
-   - **Static Site** (фронтенд)
-   - **Web Service** (API)
-5. Добавьте переменные окружения в Dashboard каждого сервиса
+3. Подключите репозиторий GitHub: `Rover154/RehabApp`
+4. Render автоматически создаст Web Service
+5. Добавьте переменные окружения в Dashboard
 
-### Вариант 2: Ручной
+### Ручной деплой
 
-#### Static Site (фронтенд):
-1. **New +** → **Static Site**
-2. Подключите репозиторий
-3. Build Command: `npm install && npm run build`
-4. Publish Directory: `dist`
-5. Добавьте environment variables:
-   - `VITE_TELEGRAM_BOT_TOKEN`
-   - `VITE_TELEGRAM_CHAT_ID`
-   - `VITE_IO_NET_API_KEY`
-   - `VITE_GROQ_API_KEY`
-   - `VITE_API_URL` (URL вашего Web Service)
-
-#### Web Service (API):
 1. **New +** → **Web Service**
 2. Подключите репозиторий
-3. Environment: `Node`
-4. Build Command: `npm install`
-5. Start Command: `node server.js`
-6. Добавьте environment variables:
-   - `EMAIL_USER`
-   - `EMAIL_PASSWORD`
-   - `IO_NET_API_KEY`
-   - `GROQ_API_KEY`
-   - `TELEGRAM_BOT_TOKEN`
-   - `TELEGRAM_CHAT_ID`
-   - `PORT` (по умолчанию 10000)
+3. Build Command: `npm install && npm run build`
+4. Start Command: `node server.js`
+5. Добавьте environment variables (см. [DEPLOY_RENDER.md](DEPLOY_RENDER.md))
+
+📖 **Подробная инструкция**: [DEPLOY_RENDER.md](DEPLOY_RENDER.md)
 
 ## 📁 Структура проекта
 
 ```
 rehab-app/
 ├── api/
-│   └── send-email.ts       # API для отправки email с AI генерацией
+│   └── send-email.js       # API для отправки email с AI генерацией (io.net + Groq)
 ├── src/
 │   ├── components/
 │   │   ├── Step1Welcome.tsx
@@ -96,18 +75,17 @@ rehab-app/
 │   │   ├── Step6Contraindications.tsx
 │   │   ├── Step7Format.tsx
 │   │   ├── Step8Contact.tsx
-│   │   ├── Step9Result.tsx
-│   │   └── FormComponents.tsx
+│   │   └── Step9Result.tsx
 │   ├── utils/
 │   │   ├── cn.ts
 │   │   └── validate.ts
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
-├── server.js               # Express сервер для API
-├── render.yaml             # Конфигурация для Render
-├── vercel.json             # Конфигурация для Vercel
-└── package.json
+├── server.js               # Express сервер (фронтенд + API)
+├── render.yaml             # Конфигурация для Render.com
+├── package.json
+└── README.md
 ```
 
 ## 🤖 AI Генерация упражнений
@@ -118,9 +96,19 @@ rehab-app/
 2. **Groq** (Llama-3.1-8b-instant) — резервный API
 
 ### Преимущества:
-- Автоматическое переключение при исчерпании лимита токенов
-- Дневные лимиты: io.net (10k токенов), Groq (100k токенов)
-- Fallback генерация при недоступности обоих API
+- ✅ Автоматическое переключение при исчерпании лимита токенов
+- ✅ Дневные лимиты: io.net (10k токенов), Groq (100k токенов)
+- ✅ Fallback генерация при недоступности обоих API
+- ✅ Сброс счётчиков токенов каждый день (UTC)
+
+### Как работает переключение:
+
+```
+1. Проверка io.net → доступно → используем io.net
+2. io.net недоступен (401/429) → проверка Groq → используем Groq
+3. Лимит io.net исчерпан → переключение на Groq
+4. Лимит Groq исчерпан → попытка вернуться на io.net
+```
 
 ## 📱 Экраны приложения
 
@@ -140,6 +128,16 @@ rehab-app/
 - Адаптивный дизайн (ПК, планшет, смартфон)
 - Зелёные кнопки с белым текстом
 
+## 💰 Стоимость деплоя
+
+| Сервис | Тариф | Стоимость |
+|---|---|---|
+| Render Web Service | Starter | $7/мес |
+
+> ⚠️ На бесплатном тарифе Render может переводить сервис в спящий режим.
+
 ## 📞 Контакты
 
 📞 +7 (953) 790-20-10
+📧 rover38354@gmail.com
+💬 Telegram: @cigunrehab

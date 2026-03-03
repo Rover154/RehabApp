@@ -1,13 +1,18 @@
 services:
-  # Static Site для фронтенда
-  - type: static
-    name: rehab-app-static
-    env: static
+  # Единый Web Service для фронтенда + API
+  - type: web
+    name: rehab-app
+    env: node
+    region: oregon
+    plan: starter
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    startCommand: node server.js
+    healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: 20
+      - key: PORT
+        value: 10000
       - key: VITE_TELEGRAM_BOT_TOKEN
         sync: false
       - key: VITE_TELEGRAM_CHAT_ID
@@ -18,21 +23,7 @@ services:
         sync: false
       - key: VITE_API_URL
         sync: false
-
-  # Web Service для API
-  - type: web
-    name: rehab-app-api
-    env: node
-    region: oregon
-    plan: starter
-    buildCommand: npm install
-    startCommand: node server.js
-    healthCheckPath: /health
-    envVars:
-      - key: NODE_VERSION
-        value: 20
-      - key: PORT
-        value: 10000
+        value: ""
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASSWORD

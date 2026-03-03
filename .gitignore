@@ -11,6 +11,7 @@ node_modules
 
 # Build output
 dist
+.cache
 
 # Environment variables
 .env
@@ -28,10 +29,5 @@ dist
 *.sln
 *.sw?
 
-# Build
-.cache
-.vercel
-
-# Dist (для локальной разработки, на Render билдится автоматически)
-# dist
-"api/submit.ts"  
+# Render / Vercel
+.vercel  
