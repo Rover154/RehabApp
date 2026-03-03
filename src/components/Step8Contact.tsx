@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, ArrowLeft, User, Phone, Mail, MessageSquare, CheckSquare, Loader } from 'lucide-react';
+import { ArrowRight, ArrowLeft, User, Phone, Mail, MessageSquare, Loader } from 'lucide-react';
 import { validateName, validatePhone, validateEmail } from '../utils/validate';
 
 interface Step8ContactProps {
