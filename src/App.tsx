@@ -209,9 +209,19 @@ ${data.comment ? `- 💬 Комментарий: ${data.comment}` : ''}
       case 7:
         return <Step7Format onNext={(format) => { updateData({ format }); nextStep(); }} onBack={prevStep} />;
       case 8:
-        return <Step8Contact initialName={formData.name} onNext={(data) => { const finalData = { ...formData, ...data }; updateData(data); handleTelegramSend(finalData); nextStep(); }} onBack={prevStep} />;
+        return <Step8Contact initialName={formData.name} onNext={(data) => { 
+          const finalData = { ...formData, ...data }; 
+          updateData(data); 
+          handleTelegramSend(finalData); 
+          nextStep(); 
+        }} onBack={prevStep} />;
       case 9:
-        return <Step9Result name={formData.name} onBuy={handleBuy} isBuying={isBuying} />;
+        return <Step9Result 
+          name={formData.name} 
+          exercisePlan={(formData as any).exercisePlan} 
+          onBuy={handleBuy} 
+          isBuying={isBuying} 
+        />;
       default:
         return null;
     }
