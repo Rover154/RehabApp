@@ -43,13 +43,9 @@ export function Step9Result({
       unit: 'mm',
       format: 'a4'
     });
-
-    // Загружаем шрифт Roboto с поддержкой кириллицы (base64)
-    // Используем встроенный шрифт или загружаем
-    const fontUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf';
     
-    // Для поддержки кириллицы используем стандартный шрифт
-    // jsDF по умолчанию использует шрифт без кириллицы, поэтому транслитерируем
+    // Для поддержки кириллицы используем транслитерацию
+    // jsPDF по умолчанию использует шрифт без кириллицы
     const transliterate: (text: string) => string = (text) => {
       const ru = 'АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯя';
       const en = 'AaBbVvGgDdEeEeZhzhZzIiIjKkLlMmNnOoPpRrSsTtUuFfHhCcChchShshShsh""Yy""EeYuya';
