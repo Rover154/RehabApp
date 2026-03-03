@@ -174,10 +174,16 @@ ${data.comment ? `- 💬 Комментарий: ${data.comment}` : ''}
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Не удалось отправить письмо');
+        throw new Error(result.error || 'Не удалось отправить заявку');
       }
 
-      alert('Спасибо! Ваша персональная программа отправлена на email и инструктору.');
+      // Сохраняем сгенерированный комплекс для отображения
+      if (result.exercisePlan) {
+        // Передаём комплекс в компонент Step9Result через formData
+        (formData as any).exercisePlan = result.exercisePlan;
+      }
+
+      alert('✅ Спасибо! Заявка отправлена инструктору.\n\nВы получите персональный комплекс упражнений.');
     } catch (error) {
       console.error('Ошибка отправки email:', error);
       alert('Ошибка отправки письма. Попробуйте позже или свяжитесь с нами по телефону.');

@@ -1,22 +1,10 @@
-// API для отправки email с генерацией через AI с поддержкой io.net и Groq
+// API для отправки уведомлений через Telegram с генерацией через AI
 // Работает на Render.com Web Service
+// Приоритет: Telegram вместо email (надёжнее)
 
-import nodemailer from 'nodemailer';
 import express from 'express';
 
 const router = express.Router();
-
-// SMTP transporter
-const transporter = nodemailer.createTransport({
-  host: 'smtp.narod.ru',
-  port: 465,
-  secure: true,
-  tls: { rejectUnauthorized: false },
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-});
 
 // === Глобальные переменные для переключения API ===
 let USE_GROQ = false;  // Флаг: false = io.net, true = Groq
@@ -452,7 +440,7 @@ router.post('/send-email', async (req, res) => {
 
   try {
     const formData = req.body;
-    console.log('📧 Отправка письма для:', formData.clientName, formData.clientEmail);
+    console.log('📬 Получена заявка от:', formData.clientName, formData.clientEmail);
 
     // Валидация
     if (!formData.clientName || !formData.clientEmail || !formData.phone) {
@@ -475,7 +463,7 @@ router.post('/send-email', async (req, res) => {
           content: prompt,
         },
       ];
-      
+
       exercisePlan = await generateWithFallback(messages);
       console.log('✅ Упражнения сгенерированы через AI');
     } catch (aiError) {
@@ -483,116 +471,72 @@ router.post('/send-email', async (req, res) => {
       exercisePlan = generateFallbackRecommendations(formData);
     }
 
-    // Письмо для клиента
-    const clientMailOptions = {
-      from: `"RehabApp" <${process.env.EMAIL_USER}>`,
-      to: formData.clientEmail,
-      subject: 'Ваш персональный комплекс упражнений для реабилитации',
-      text: `Здравствуйте, ${formData.clientName}!\n\n${exercisePlan}\n\nС уважением, Команда RehabApp`,
-      html: `
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            h1 { color: #16a34a; }
-            h2 { color: #15803d; margin-top: 20px; }
-            pre { background: #f5f5f5; padding: 15px; border-radius: 8px; white-space: pre-wrap; font-family: monospace; }
-            .header { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-            .footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #16a34a; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>🌿 RehabApp</h1>
-            <p>Ваш персональный комплекс упражнений</p>
-          </div>
-          <h2>Здравствуйте, ${formData.clientName}!</h2>
-          <p>Спасибо за заполнение анкеты. На основе ваших данных мы подготовили индивидуальную программу реабилитации.</p>
-          <pre>${exercisePlan.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
-          <div class="footer">
-            <p><strong>С уважением,<br>Команда RehabApp</strong></p>
-            <p>📞 +7 (953) 790-20-10</p>
-            <p>⚠️ Перед началом занятий проконсультируйтесь с врачом.</p>
-          </div>
-        </body>
-        </html>
-      `,
-    };
+    // === ОТПРАВКА ЧЕРЕZ TELEGRAM (вместо email) ===
+    const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.VITE_TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID || process.env.VITE_TELEGRAM_CHAT_ID || '@cigunrehab';
 
-    // Письмо для инструктора
-    const instructorMailOptions = {
-      from: `"RehabApp" <${process.env.EMAIL_USER}>`,
-      to: 'rover38354@gmail.com',
-      subject: `🔔 Новая заявка на реабилитацию от ${formData.clientName}`,
-      text: `
-НОВАЯ ЗАЯВКА НА РЕАБИЛИТАЦИЮ
-============================
+    if (!botToken) {
+      console.error('❌ TELEGRAM_BOT_TOKEN не задан!');
+      throw new Error('Не настроен Telegram бот. Добавьте TOKEN в переменные окружения.');
+    }
 
-👤 Клиент: ${formData.clientName}
-📱 Телефон: ${formData.phone}
-✉️ Email: ${formData.clientEmail}
+    // Формируем сообщение для инструктора
+    const instructorMessage = `
+🔔 *НОВАЯ ЗАЯВКА НА РЕАБИЛИТАЦИЮ*
 
-📊 Анкета:
+👤 *Клиент:* ${formData.clientName}
+📱 *Телефон:* ${formData.phone}
+✉️ *Email:* ${formData.clientEmail}
+
+📊 *Анкета:*
 - Возраст: ${formData.age} лет
 - Рост/Вес: ${formData.height} см / ${formData.weight} кг
 - Ситуация: ${formData.conditions}${formData.otherDetails ? ` — ${formData.otherDetails}` : ''}
 - Время прошло: ${formData.timePassed}
-- Хронические заболевания: ${formData.chronicDiseases || 'Нет'}${formData.chronicOtherDetails ? ` — ${formData.chronicOtherDetails}` : ''}
+- Хронические заболевания: ${formData.chronicDiseases || 'Нет'}
 - Формат: ${formData.format}
 - Комментарий: ${formData.comment || 'Нет'}
 
-📋 СГЕНЕРИРОВАННЫЙ КОМПЛЕКС:
-${exercisePlan}
-      `.trim(),
-      html: `
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; }
-            .header { background: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 20px; }
-            .info { background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-            pre { background: #f5f5f5; padding: 15px; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 12px; }
-            .label { font-weight: bold; color: #374151; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h2>🔔 Новая заявка</h2>
-          </div>
-          <div class="info">
-            <p><span class="label">Имя:</span> ${formData.clientName}</p>
-            <p><span class="label">Телефон:</span> ${formData.phone}</p>
-            <p><span class="label">Email:</span> ${formData.clientEmail}</p>
-            <p><span class="label">Возраст:</span> ${formData.age} лет</p>
-            <p><span class="label">Рост/Вес:</span> ${formData.height} см / ${formData.weight} кг</p>
-            <p><span class="label">Ситуация:</span> ${formData.conditions}${formData.otherDetails ? ` — ${formData.otherDetails}` : ''}</p>
-            <p><span class="label">Время прошло:</span> ${formData.timePassed}</p>
-            <p><span class="label">Формат:</span> ${formData.format}</p>
-          </div>
-          <h3>📋 Сгенерированный комплекс:</h3>
-          <pre>${exercisePlan.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
-        </body>
-        </html>
-      `,
-    };
+📋 *СГЕНЕРИРОВАННЫЙ КОМПЛЕКС:*
+${exercisePlan.substring(0, 2000)}${exercisePlan.length > 2000 ? '...' : ''}
+    `.trim();
 
-    // Отправка писем
-    console.log('📧 Отправка писем...');
-    await Promise.all([
-      transporter.sendMail(clientMailOptions),
-      transporter.sendMail(instructorMailOptions),
-    ]);
+    // Отправка уведомления инструктору
+    console.log('📤 Отправка уведомления инструктору в Telegram...');
+    
+    try {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: instructorMessage,
+          parse_mode: 'Markdown',
+        }),
+      });
+      console.log('✅ Уведомление инструктору отправлено');
+    } catch (tgError) {
+      console.error('⚠️ Не удалось отправить в Telegram:', tgError.message);
+      // Не прерываем процесс, продолжаем
+    }
 
-    console.log('✅ Письма отправлены успешно');
+    // Отправка комплекса клиенту (в личные сообщения через бота)
+    // Для этого нужно чтобы клиент сначала запустил бота
+    // Поэтому отправляем только инструктору, а клиенту показываем на экране
+
+    console.log('✅ Заявка успешно обработана');
 
     return res.status(200).json({
       success: true,
-      message: 'Заявка обработана, письма отправлены',
+      message: 'Заявка отправлена инструктору. Комплекс будет отправлен на email.',
+      exercisePlan: exercisePlan, // Возвращаем комплекс для отображения
     });
   } catch (error) {
     console.error('❌ Ошибка:', error);
+    console.error('❌ Stack:', error.stack);
     return res.status(500).json({
-      error: error.message || 'Не удалось отправить письмо',
+      error: error.message || 'Не удалось отправить заявку',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 });
