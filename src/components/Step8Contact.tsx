@@ -39,50 +39,95 @@ export function Step8Contact({ initialName, onNext, onBack }: Step8ContactProps)
     <div className="card animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">Как с вами связаться для отправки рекомендации?</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Ваше имя *</label>
+          <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700">Ваше имя *</label>
           <div className="relative">
             <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-            <input type="text" value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} />
+            <input 
+              id="contact-name" 
+              name="name" 
+              type="text" 
+              autoComplete="name"
+              value={data.name} 
+              onChange={(e) => setData({ ...data, name: e.target.value })} 
+              className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} 
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? 'contact-name-error' : undefined}
+            />
           </div>
-          {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
+          {errors.name && <p id="contact-name-error" className="text-sm text-red-600" role="alert">{errors.name}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Телефон *</label>
+          <label htmlFor="contact-phone" className="block text-sm font-medium text-gray-700">Телефон *</label>
           <div className="relative">
             <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-            <input type="tel" placeholder="+7 (999) 000-00-00" value={data.phone} onChange={(e) => setData({ ...data, phone: e.target.value })} className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} />
+            <input 
+              id="contact-phone" 
+              name="phone" 
+              type="tel" 
+              autoComplete="tel"
+              placeholder="+7 (999) 000-00-00" 
+              value={data.phone} 
+              onChange={(e) => setData({ ...data, phone: e.target.value })} 
+              className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} 
+              aria-invalid={!!errors.phone}
+              aria-describedby={errors.phone ? 'contact-phone-error' : undefined}
+            />
           </div>
-          {errors.phone && <p className="text-sm text-red-600">{errors.phone}</p>}
+          {errors.phone && <p id="contact-phone-error" className="text-sm text-red-600" role="alert">{errors.phone}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Email для получения методички *</label>
+          <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700">Email для получения методички *</label>
           <div className="relative">
             <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-            <input type="email" placeholder="example@mail.ru" value={data.email} onChange={(e) => setData({ ...data, email: e.target.value })} className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none ${errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} />
+            <input 
+              id="contact-email" 
+              name="email" 
+              type="email" 
+              autoComplete="email"
+              placeholder="example@mail.ru" 
+              value={data.email} 
+              onChange={(e) => setData({ ...data, email: e.target.value })} 
+              className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none ${errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} 
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'contact-email-error' : undefined}
+            />
           </div>
-          {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
+          {errors.email && <p id="contact-email-error" className="text-sm text-red-600" role="alert">{errors.email}</p>}
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Комментарий (по желанию)</label>
+          <label htmlFor="contact-comment" className="block text-sm font-medium text-gray-700">Комментарий (по желанию)</label>
           <div className="relative">
             <MessageSquare className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-            <textarea rows={3} value={data.comment} onChange={(e) => setData({ ...data, comment: e.target.value })} className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none" />
+            <textarea 
+              id="contact-comment" 
+              name="comment" 
+              rows={3} 
+              value={data.comment} 
+              onChange={(e) => setData({ ...data, comment: e.target.value })} 
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-green-500 outline-none" 
+            />
           </div>
         </div>
 
         <div className="flex items-start">
-          <button type="button" onClick={() => setData({ ...data, consent: !data.consent })} className={`flex-shrink-0 h-6 w-6 rounded border transition-colors flex items-center justify-center mt-0.5 ${data.consent ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300 bg-white'} ${errors.consent ? 'ring-2 ring-red-500' : ''}`}>
-            {data.consent && <CheckSquare className="h-4 w-4" />}
-          </button>
-          <div className="ml-3 text-sm">
-            <label onClick={() => setData({ ...data, consent: !data.consent })} className="font-medium text-gray-700 cursor-pointer">Согласен на обработку персональных данных</label>
-            {errors.consent && <p className="text-red-600 text-xs mt-1">Необходимо согласие</p>}
-          </div>
+          <input 
+            type="checkbox" 
+            id="contact-consent" 
+            name="consent" 
+            checked={data.consent} 
+            onChange={(e) => setData({ ...data, consent: e.target.checked })} 
+            className={`flex-shrink-0 h-6 w-6 rounded border transition-colors cursor-pointer ${data.consent ? 'bg-green-600 border-green-600' : 'border-gray-300 bg-white'} ${errors.consent ? 'ring-2 ring-red-500' : ''}`} 
+            aria-invalid={!!errors.consent}
+          />
+          <label htmlFor="contact-consent" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+            Согласен на обработку персональных данных
+          </label>
+          {errors.consent && <p className="text-red-600 text-xs mt-1 ml-3" role="alert">Необходимо согласие</p>}
         </div>
 
         <div className="flex gap-3 mt-6 justify-center">

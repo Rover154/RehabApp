@@ -110,7 +110,19 @@ export function Step5Specifics({ conditions, onNext, onBack }: Step5SpecificsPro
             ))}
           </div>
           {traumaArea === 'other' && (
-            <textarea rows={2} value={traumaOtherDetails} onChange={(e) => setTraumaOtherDetails(e.target.value)} className="input-field mt-3" placeholder="Опишите область травмы *" />
+            <div className="mt-3">
+              <label htmlFor="trauma-other" className="block text-sm font-medium text-gray-700 mb-2">Опишите область травмы *</label>
+              <textarea 
+                id="trauma-other" 
+                name="traumaOtherDetails" 
+                rows={2} 
+                value={traumaOtherDetails} 
+                onChange={(e) => setTraumaOtherDetails(e.target.value)} 
+                className="input-field" 
+                placeholder="Опишите область травмы *" 
+                aria-required="true"
+              />
+            </div>
           )}
         </div>
       )}

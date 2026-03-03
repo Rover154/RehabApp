@@ -46,8 +46,17 @@ export function Step6Contraindications({ onNext, onBack }: Step6Contraindication
 
       {showOtherInput && (
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Опишите заболевание *</label>
-          <textarea rows={2} value={otherDetails} onChange={(e) => setOtherDetails(e.target.value)} className="input-field" placeholder="Подробности..." />
+          <label htmlFor="chronic-other" className="block text-sm font-medium text-gray-700 mb-2">Опишите заболевание *</label>
+          <textarea 
+            id="chronic-other" 
+            name="otherDetails" 
+            rows={2} 
+            value={otherDetails} 
+            onChange={(e) => setOtherDetails(e.target.value)} 
+            className="input-field" 
+            placeholder="Подробности..." 
+            aria-required="true"
+          />
         </div>
       )}
 

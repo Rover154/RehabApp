@@ -46,8 +46,17 @@ export function Step3Condition({ onNext, onBack }: Step3ConditionProps) {
 
       {showOtherInput && (
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Опишите вашу ситуацию *</label>
-          <textarea rows={3} value={otherDetails} onChange={(e) => setOtherDetails(e.target.value)} className="input-field" placeholder="Подробности..." />
+          <label htmlFor="condition-other" className="block text-sm font-medium text-gray-700 mb-2">Опишите вашу ситуацию *</label>
+          <textarea 
+            id="condition-other" 
+            name="otherDetails" 
+            rows={3} 
+            value={otherDetails} 
+            onChange={(e) => setOtherDetails(e.target.value)} 
+            className="input-field" 
+            placeholder="Подробности..." 
+            aria-required="true"
+          />
         </div>
       )}
 
