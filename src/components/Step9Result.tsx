@@ -1,8 +1,6 @@
 import { useState } from 'react';
 // @ts-ignore - pdfmake не имеет типов TypeScript
 import pdfMake from 'pdfmake/build/pdfmake';
-// @ts-ignore
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { CheckCircle, MessageCircle, Download, Copy, Check, FileText, Video, Loader } from 'lucide-react';
 
 interface Step9ResultProps {
@@ -40,8 +38,15 @@ export function Step9Result({
   const handleDownloadPdf = () => {
     if (!exercisePlan) return;
 
-    // Поддержка кириллицы через pdfmake
-    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+    // Загружаем шрифты с CDN для поддержки кириллицы
+    pdfMake.fonts = {
+      Roboto: {
+        normal: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf',
+        bold: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Medium.ttf',
+        italics: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Italic.ttf',
+        bolditalics: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-MediumItalic.ttf'
+      }
+    };
 
     // Форматируем дату правильно (ru-RU)
     const currentDate = new Date();
@@ -52,6 +57,9 @@ export function Step9Result({
     });
 
     const docDefinition = {
+      defaultStyle: {
+        font: 'Roboto'
+      },
       content: [
         // Заголовок
         {
@@ -106,24 +114,29 @@ export function Step9Result({
         header: {
           fontSize: 24,
           bold: true,
-          margin: [0, 0, 0, 5]
+          margin: [0, 0, 0, 5],
+          font: 'Roboto'
         },
         subheader: {
           fontSize: 14,
-          margin: [0, 0, 0, 10]
+          margin: [0, 0, 0, 10],
+          font: 'Roboto'
         },
         date: {
           fontSize: 10,
           italic: true,
-          margin: [0, 0, 0, 10]
+          margin: [0, 0, 0, 10],
+          font: 'Roboto'
         },
         infoTable: {
           fontSize: 11,
-          margin: [0, 0, 0, 10]
+          margin: [0, 0, 0, 10],
+          font: 'Roboto'
         },
         content: {
           fontSize: 11,
-          lineHeight: 1.5
+          lineHeight: 1.5,
+          font: 'Roboto'
         }
       },
       pageMargins: [20, 20, 20, 20]
