@@ -484,10 +484,10 @@ router.post('/send-email', async (req, res) => {
     const requestType = formData.requestType || 'pdf';
     const isVideoRequest = requestType === 'video';
 
-    // Формируем сообщение для инструктора
+    // Формируем сообщение для инструктора (часть 1 - данные клиента)
     const requestLabel = isVideoRequest ? '🎥 ЗАПРОС НА ВИДЕО-КОМПЛЕКС' : '📄 ЗАПРОС НА PDF КОМПЛЕКС';
     
-    const instructorMessage = `
+    const clientInfoMessage = `
 ${requestLabel}
 
 👤 *Клиент:* ${formData.clientName}
@@ -502,25 +502,72 @@ ${requestLabel}
 - Хронические заболевания: ${formData.chronicDiseases || 'Нет'}
 - Формат: ${formData.format}
 - Комментарий: ${formData.comment || 'Нет'}
-
-📋 *СГЕНЕРИРОВАННЫЙ КОМПЛЕКС:*
-${exercisePlan.substring(0, 2000)}${exercisePlan.length > 2000 ? '...' : ''}
     `.trim();
+
+    // Разбиваем комплекс на части (Telegram лимит ~4000 символов)
+    const maxMessageLength = 3500;
+    const exercisePlanParts = [];
+    let remainingText = exercisePlan;
+    
+    while (remainingText.length > 0) {
+      if (remainingText.length <= maxMessageLength) {
+        exercisePlanParts.push(remainingText);
+        break;
+      }
+      // Разбиваем по границе абзаца или предложения
+      let splitIndex = remainingText.lastIndexOf('\n\n', maxMessageLength);
+      if (splitIndex === -1 || splitIndex < maxMessageLength / 2) {
+        splitIndex = remainingText.lastIndexOf('.', maxMessageLength);
+      }
+      if (splitIndex === -1) {
+        splitIndex = maxMessageLength;
+      } else {
+        splitIndex += 1; // Включаем точку или перенос строки
+      }
+      exercisePlanParts.push(remainingText.substring(0, splitIndex));
+      remainingText = remainingText.substring(splitIndex);
+    }
 
     // Отправка уведомления инструктору
     console.log('📤 Отправка уведомления инструктору в Telegram...');
 
     try {
+      // Сообщение 1: Данные клиента
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: instructorMessage,
+          text: clientInfoMessage,
           parse_mode: 'Markdown',
         }),
       });
-      console.log('✅ Уведомление инструктору отправлено');
+      console.log('✅ Сообщение 1 (данные клиента) отправлено');
+
+      // Сообщение 2+: Комплекс упражнений (может быть несколько частей)
+      for (let i = 0; i < exercisePlanParts.length; i++) {
+        const partNum = i + 1;
+        const totalParts = exercisePlanParts.length;
+        const partText = `📋 *СГЕНЕРИРОВАННЫЙ КОМПЛЕКС (${partNum}/${totalParts}):*\n\n${exercisePlanParts[i]}`;
+        
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: partText,
+            parse_mode: 'Markdown',
+          }),
+        });
+        console.log(`✅ Сообщение ${partNum + 1} (${partNum}/${totalParts}) комплекса отправлено`);
+        
+        // Небольшая задержка между сообщениями
+        if (i < exercisePlanParts.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      console.log('✅ Все сообщения инструктору отправлены');
     } catch (tgError) {
       console.error('⚠️ Не удалось отправить в Telegram:', tgError.message);
       // Не прерываем процесс, продолжаем

@@ -48,31 +48,42 @@ export function Step9Result({
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
     doc.setTextColor(22, 163, 74);
-    doc.text('🌿 RehabApp', 20, 20);
+    doc.text('RehabApp', 20, 20);
     
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
-    doc.text('Персональный комплекс упражнений', 20, 28);
+    doc.text('Personalny kompleks uprazhneniy', 20, 28);
     
     // Информация о клиенте
     doc.setFontSize(10);
     doc.setTextColor(50, 50, 50);
-    doc.text(`Клиент: ${name}`, 20, 38);
+    doc.text(`Klient: ${name}`, 20, 38);
     doc.text(`Email: ${email}`, 20, 43);
-    doc.text(`Телефон: ${phone}`, 20, 48);
-    doc.text(`Дата: ${new Date().toLocaleDateString('ru-RU')}`, 20, 53);
+    doc.text(`Telefon: ${phone}`, 20, 48);
+    doc.text(`Data: ${new Date().toLocaleDateString('ru-RU')}`, 20, 53);
     
     // Разделительная линия
     doc.setDrawColor(22, 163, 74);
     doc.setLineWidth(0.5);
     doc.line(20, 56, 190, 56);
     
-    // Основной текст комплекса
+    // Основной текст комплекса (транслитерация для PDF)
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     
-    const textLines = doc.splitTextToSize(exercisePlan, 170);
+    // Транслитерация русского текста для PDF
+    const transliterate = (text) => {
+      const ru = 'АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯя';
+      const en = 'AaBbVvGgDdEeEeZhzhZzIiIjKkLlMmNnOoPpRrSsTtUuFfHhCcChchShshShsh""Yy""EeYuya';
+      return text.split('').map(char => {
+        const idx = ru.indexOf(char);
+        return idx !== -1 ? en.substring(idx, idx + (char === char.toUpperCase() ? 1 : 1)) : char;
+      }).join('');
+    };
+    
+    const transliteratedPlan = transliterate(exercisePlan);
+    const textLines = doc.splitTextToSize(transliteratedPlan, 170);
     let yPos = 65;
     
     textLines.forEach((line: string) => {
@@ -90,11 +101,11 @@ export function Step9Result({
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text(`Страница ${i} из ${pageCount}`, 100, 290, { align: 'center' });
+      doc.text(`Stranitsa ${i} iz ${pageCount}`, 100, 290, { align: 'center' });
     }
     
     // Сохранение файла
-    doc.save(`Комплекс_упражнений_${name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Complex_uprazhneniy_${name.replace(/\s+/g, '_')}.pdf`);
     setPdfGenerated(true);
   };
 
