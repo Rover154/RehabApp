@@ -35,7 +35,7 @@ export function Step9Result({
     }
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!exercisePlan) return;
 
     const doc = new jsPDF({
@@ -44,7 +44,22 @@ export function Step9Result({
       format: 'a4'
     });
 
-    // Заголовок
+    // Загружаем шрифт Roboto с поддержкой кириллицы (base64)
+    // Используем встроенный шрифт или загружаем
+    const fontUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf';
+    
+    // Для поддержки кириллицы используем стандартный шрифт
+    // jsDF по умолчанию использует шрифт без кириллицы, поэтому транслитерируем
+    const transliterate: (text: string) => string = (text) => {
+      const ru = 'АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯя';
+      const en = 'AaBbVvGgDdEeEeZhzhZzIiIjKkLlMmNnOoPpRrSsTtUuFfHhCcChchShshShsh""Yy""EeYuya';
+      return text.split('').map((char: string) => {
+        const idx = ru.indexOf(char);
+        return idx !== -1 ? en[idx] : char;
+      }).join('');
+    };
+
+    // Заголовок (транслит)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
     doc.setTextColor(22, 163, 74);
@@ -54,10 +69,10 @@ export function Step9Result({
     doc.setTextColor(100, 100, 100);
     doc.text('Personalny kompleks uprazhneniy', 20, 28);
     
-    // Информация о клиенте
+    // Информация о клиенте (транслит)
     doc.setFontSize(10);
     doc.setTextColor(50, 50, 50);
-    doc.text(`Klient: ${name}`, 20, 38);
+    doc.text(`Klient: ${transliterate(name)}`, 20, 38);
     doc.text(`Email: ${email}`, 20, 43);
     doc.text(`Telefon: ${phone}`, 20, 48);
     doc.text(`Data: ${new Date().toLocaleDateString('ru-RU')}`, 20, 53);
@@ -67,12 +82,13 @@ export function Step9Result({
     doc.setLineWidth(0.5);
     doc.line(20, 56, 190, 56);
     
-    // Основной текст комплекса
+    // Основной текст комплекса (транслит)
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     
-    const textLines = doc.splitTextToSize(exercisePlan, 170);
+    const transliteratedPlan = transliterate(exercisePlan);
+    const textLines = doc.splitTextToSize(transliteratedPlan, 170);
     let yPos = 65;
     
     textLines.forEach((line: string) => {
