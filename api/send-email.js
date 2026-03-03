@@ -484,7 +484,7 @@ router.post('/send-email', async (req, res) => {
     const requestType = formData.requestType || 'pdf';
     const isVideoRequest = requestType === 'video';
 
-    // Формируем сообщение для инструктора (часть 1 - данные клиента)
+    // Формируем сообщение для инструктора
     const requestLabel = isVideoRequest ? '🎥 ЗАПРОС НА ВИДЕО-КОМПЛЕКС' : '📄 ЗАПРОС НА PDF КОМПЛЕКС';
     
     const clientInfoMessage = `
@@ -502,7 +502,62 @@ ${requestLabel}
 - Хронические заболевания: ${formData.chronicDiseases || 'Нет'}
 - Формат: ${formData.format}
 - Комментарий: ${formData.comment || 'Нет'}
+
+${isVideoRequest ? '💡 *Клиент запросил видео-версию комплекса.*\nПожалуйста, свяжитесь с клиентом и вышлите видео-инструкции.' : ''}
     `.trim();
+
+    // Отправка данных клиента в Telegram
+    console.log('📤 Отправка уведомления инструктору в Telegram...');
+
+    try {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: clientInfoMessage,
+          parse_mode: 'Markdown',
+        }),
+      });
+      console.log('✅ Сообщение с данными клиента отправлено');
+    } catch (tgError) {
+      console.error('⚠️ Не удалось отправить в Telegram:', tgError.message);
+      // Не прерываем процесс, продолжаем
+    }
+
+    // Если это видео-запрос, НЕ генерируем комплекс, просто подтверждаем
+    if (isVideoRequest) {
+      console.log('✅ Видео-запрос отправлен инструктору');
+
+      return res.status(200).json({
+        success: true,
+        message: 'Запрос на видео-комплекс отправлен инструктору.',
+      });
+    }
+
+    // Для PDF запроса генерируем комплекс
+    console.log('🤖 Генерация упражнений через AI...');
+    let exercisePlan;
+
+    try {
+      const prompt = createPrompt(formData);
+      const messages = [
+        {
+          role: 'system',
+          content: 'Ты — профессиональный врач-реабилитолог. Составляешь безопасные и эффективные комплексы упражнений для реабилитации.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ];
+
+      exercisePlan = await generateWithFallback(messages);
+      console.log('✅ Упражнения сгенерированы через AI');
+    } catch (aiError) {
+      console.error('❌ Ошибка AI, используем запасной вариант:', aiError.message);
+      exercisePlan = generateFallbackRecommendations(formData);
+    }
 
     // Разбиваем комплекс на части (Telegram лимит ~4000 символов)
     const maxMessageLength = 3500;
@@ -528,22 +583,7 @@ ${requestLabel}
       remainingText = remainingText.substring(splitIndex);
     }
 
-    // Отправка уведомления инструктору
-    console.log('📤 Отправка уведомления инструктору в Telegram...');
-
     try {
-      // Сообщение 1: Данные клиента
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: clientInfoMessage,
-          parse_mode: 'Markdown',
-        }),
-      });
-      console.log('✅ Сообщение 1 (данные клиента) отправлено');
-
       // Сообщение 2+: Комплекс упражнений (может быть несколько частей)
       for (let i = 0; i < exercisePlanParts.length; i++) {
         const partNum = i + 1;
@@ -573,24 +613,14 @@ ${requestLabel}
       // Не прерываем процесс, продолжаем
     }
 
-    // Если это не видео-запрос, возвращаем комплекс клиенту
-    if (!isVideoRequest) {
-      console.log('✅ Заявка успешно обработана');
+    // Возвращаем комплекс клиенту
+    console.log('✅ Заявка успешно обработана');
 
-      return res.status(200).json({
-        success: true,
-        message: 'Заявка отправлена инструктору. Комплекс доступен для скачивания.',
-        exercisePlan: exercisePlan, // Возвращаем комплекс для отображения
-      });
-    } else {
-      // Для видео-запроса просто подтверждаем отправку
-      console.log('✅ Видео-запрос отправлен инструктору');
-
-      return res.status(200).json({
-        success: true,
-        message: 'Запрос на видео-комплекс отправлен инструктору.',
-      });
-    }
+    return res.status(200).json({
+      success: true,
+      message: 'Заявка отправлена инструктору. Комплекс доступен для скачивания.',
+      exercisePlan: exercisePlan, // Возвращаем комплекс для отображения
+    });
   } catch (error) {
     console.error('❌ Ошибка:', error);
     console.error('❌ Stack:', error.stack);

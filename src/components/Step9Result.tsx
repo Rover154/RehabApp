@@ -67,23 +67,12 @@ export function Step9Result({
     doc.setLineWidth(0.5);
     doc.line(20, 56, 190, 56);
     
-    // Основной текст комплекса (транслитерация для PDF)
+    // Основной текст комплекса
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     
-    // Транслитерация русского текста для PDF
-    const transliterate: (text: string) => string = (text) => {
-      const ru = 'АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯя';
-      const en = 'AaBbVvGgDdEeEeZhzhZzIiIjKkLlMmNnOoPpRrSsTtUuFfHhCcChchShshShsh""Yy""EeYuya';
-      return text.split('').map((char: string) => {
-        const idx = ru.indexOf(char);
-        return idx !== -1 ? en.substring(idx, idx + (char === char.toUpperCase() ? 1 : 1)) : char;
-      }).join('');
-    };
-    
-    const transliteratedPlan = transliterate(exercisePlan);
-    const textLines = doc.splitTextToSize(transliteratedPlan, 170);
+    const textLines = doc.splitTextToSize(exercisePlan, 170);
     let yPos = 65;
     
     textLines.forEach((line: string) => {
