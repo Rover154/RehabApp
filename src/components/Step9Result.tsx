@@ -1,6 +1,8 @@
 import { useState } from 'react';
-// @ts-ignore - jspdf не имеет типов TypeScript
-import jsPDF from 'jspdf';
+// @ts-ignore - pdfmake не имеет типов TypeScript
+import pdfMake from 'pdfmake/build/pdfmake';
+// @ts-ignore
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { CheckCircle, MessageCircle, Download, Copy, Check, FileText, Video, Loader } from 'lucide-react';
 
 interface Step9ResultProps {
@@ -14,12 +16,12 @@ interface Step9ResultProps {
   isRequestingVideo?: boolean;
 }
 
-export function Step9Result({ 
-  name, 
-  phone, 
-  email, 
-  exercisePlan, 
-  onBuy, 
+export function Step9Result({
+  name,
+  phone,
+  email,
+  exercisePlan,
+  onBuy,
   onVideoRequest,
   isSendingPdf = false,
   isRequestingVideo = false
@@ -35,78 +37,81 @@ export function Step9Result({
     }
   };
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = () => {
     if (!exercisePlan) return;
 
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-    
-    // Для поддержки кириллицы используем транслитерацию
-    // jsPDF по умолчанию использует шрифт без кириллицы
-    const transliterate: (text: string) => string = (text) => {
-      const ru = 'АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯя';
-      const en = 'AaBbVvGgDdEeEeZhzhZzIiIjKkLlMmNnOoPpRrSsTtUuFfHhCcChchShshShsh""Yy""EeYuya';
-      return text.split('').map((char: string) => {
-        const idx = ru.indexOf(char);
-        return idx !== -1 ? en[idx] : char;
-      }).join('');
+    // Поддержка кириллицы через pdfmake
+    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+
+    const docDefinition = {
+      content: [
+        // Заголовок
+        {
+          text: 'RehabApp',
+          style: 'header',
+          color: '#16a34a'
+        },
+        {
+          text: 'Персональный комплекс упражнений',
+          style: 'subheader',
+          color: '#666666'
+        },
+        {
+          text: '\n'
+        },
+        // Информация о клиенте
+        {
+          style: 'infoTable',
+          table: {
+            widths: ['auto', '*'],
+            body: [
+              ['Клиент:', name],
+              ['Email:', email],
+              ['Телефон:', phone],
+              ['Дата:', new Date().toLocaleDateString('ru-RU')]
+            ]
+          },
+          layout: 'noBorders'
+        },
+        {
+          text: '\n',
+        },
+        // Разделительная линия
+        {
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#16a34a' }]
+        },
+        {
+          text: '\n'
+        },
+        // Основной текст комплекса
+        {
+          text: exercisePlan,
+          style: 'content'
+        }
+      ],
+      styles: {
+        header: {
+          fontSize: 24,
+          bold: true,
+          margin: [0, 0, 0, 5]
+        },
+        subheader: {
+          fontSize: 14,
+          margin: [0, 0, 0, 15]
+        },
+        infoTable: {
+          fontSize: 11,
+          margin: [0, 0, 0, 10]
+        },
+        content: {
+          fontSize: 11,
+          lineHeight: 1.5
+        }
+      },
+      pageMargins: [20, 20, 20, 20]
     };
 
-    // Заголовок (транслит)
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.setTextColor(22, 163, 74);
-    doc.text('RehabApp', 20, 20);
-    
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text('Personalny kompleks uprazhneniy', 20, 28);
-    
-    // Информация о клиенте (транслит)
-    doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-    doc.text(`Klient: ${transliterate(name)}`, 20, 38);
-    doc.text(`Email: ${email}`, 20, 43);
-    doc.text(`Telefon: ${phone}`, 20, 48);
-    doc.text(`Data: ${new Date().toLocaleDateString('ru-RU')}`, 20, 53);
-    
-    // Разделительная линия
-    doc.setDrawColor(22, 163, 74);
-    doc.setLineWidth(0.5);
-    doc.line(20, 56, 190, 56);
-    
-    // Основной текст комплекса (транслит)
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
-    
-    const transliteratedPlan = transliterate(exercisePlan);
-    const textLines = doc.splitTextToSize(transliteratedPlan, 170);
-    let yPos = 65;
-    
-    textLines.forEach((line: string) => {
-      if (yPos > 280) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.text(line, 20, yPos);
-      yPos += 5;
-    });
-    
-    // Подвал
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Stranitsa ${i} iz ${pageCount}`, 100, 290, { align: 'center' });
-    }
-    
-    // Сохранение файла
-    doc.save(`Complex_uprazhneniy_${name.replace(/\s+/g, '_')}.pdf`);
+    pdfMake.createPdf(docDefinition).download(`Комплекс_упражнений_${name.replace(/\s+/g, '_')}.pdf`);
     setPdfGenerated(true);
   };
 
