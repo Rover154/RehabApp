@@ -447,30 +447,6 @@ router.post('/send-email', async (req, res) => {
       return res.status(400).json({ error: 'Не заполнены обязательные поля' });
     }
 
-    // Генерация комплекса через AI с фолбэком
-    console.log('🤖 Генерация упражнений через AI...');
-    let exercisePlan;
-
-    try {
-      const prompt = createPrompt(formData);
-      const messages = [
-        {
-          role: 'system',
-          content: 'Ты — профессиональный врач-реабилитолог. Составляешь безопасные и эффективные комплексы упражнений для реабилитации.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ];
-
-      exercisePlan = await generateWithFallback(messages);
-      console.log('✅ Упражнения сгенерированы через AI');
-    } catch (aiError) {
-      console.error('❌ Ошибка AI, используем запасной вариант:', aiError.message);
-      exercisePlan = generateFallbackRecommendations(formData);
-    }
-
     // === ОТПРАВКА ЧЕРЕЗ TELEGRAM (вместо email) ===
     const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.VITE_TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID || process.env.VITE_TELEGRAM_CHAT_ID || '@cigunrehab';
