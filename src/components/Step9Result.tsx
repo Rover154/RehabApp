@@ -1,6 +1,7 @@
 import { useState } from 'react';
+// @ts-ignore - jspdf не имеет типов TypeScript
 import jsPDF from 'jspdf';
-import { CheckCircle, Mail, MessageCircle, Download, Copy, Check, FileText, Video, Loader } from 'lucide-react';
+import { CheckCircle, MessageCircle, Download, Copy, Check, FileText, Video, Loader } from 'lucide-react';
 
 interface Step9ResultProps {
   name: string;
@@ -9,7 +10,6 @@ interface Step9ResultProps {
   exercisePlan?: string;
   onBuy: () => void;
   onVideoRequest: () => void;
-  isBuying?: boolean;
   isSendingPdf?: boolean;
   isRequestingVideo?: boolean;
 }
@@ -21,7 +21,6 @@ export function Step9Result({
   exercisePlan, 
   onBuy, 
   onVideoRequest,
-  isBuying = false,
   isSendingPdf = false,
   isRequestingVideo = false
 }: Step9ResultProps) {

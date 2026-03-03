@@ -293,7 +293,6 @@ ${data.comment ? `- 💬 Комментарий: ${data.comment}` : ''}
           exercisePlan={(formData as any).exercisePlan}
           onBuy={handleBuy}
           onVideoRequest={handleVideoRequest}
-          isBuying={isBuying}
           isSendingPdf={isBuying}
           isRequestingVideo={false}
         />;
