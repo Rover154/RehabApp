@@ -43,6 +43,14 @@ export function Step9Result({
     // Поддержка кириллицы через pdfmake
     pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
+    // Форматируем дату правильно (ru-RU)
+    const currentDate = new Date();
+    const formattedDate = currentDate.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
     const docDefinition = {
       content: [
         // Заголовок
@@ -57,6 +65,11 @@ export function Step9Result({
           color: '#666666'
         },
         {
+          text: '\nДата формирования: ' + formattedDate,
+          style: 'date',
+          color: '#999999'
+        },
+        {
           text: '\n'
         },
         // Информация о клиенте
@@ -68,13 +81,13 @@ export function Step9Result({
               ['Клиент:', name],
               ['Email:', email],
               ['Телефон:', phone],
-              ['Дата:', new Date().toLocaleDateString('ru-RU')]
+              ['Дата:', formattedDate]
             ]
           },
           layout: 'noBorders'
         },
         {
-          text: '\n',
+          text: '\n'
         },
         // Разделительная линия
         {
@@ -97,7 +110,12 @@ export function Step9Result({
         },
         subheader: {
           fontSize: 14,
-          margin: [0, 0, 0, 15]
+          margin: [0, 0, 0, 10]
+        },
+        date: {
+          fontSize: 10,
+          italic: true,
+          margin: [0, 0, 0, 10]
         },
         infoTable: {
           fontSize: 11,
@@ -111,7 +129,7 @@ export function Step9Result({
       pageMargins: [20, 20, 20, 20]
     };
 
-    pdfMake.createPdf(docDefinition).download(`Комплекс_упражнений_${name.replace(/\s+/g, '_')}.pdf`);
+    pdfMake.createPdf(docDefinition).download(`Комплекс_упражнений_${name.replace(/\s+/g, '_')}_${currentDate.toISOString().split('T')[0]}.pdf`);
     setPdfGenerated(true);
   };
 
